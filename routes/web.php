@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
-use App\Http\Controllers\ProfileController; // Importa el controlador de perfil
+use App\Http\Controllers\ProfileController;
 
 // Ruta pública de bienvenida
 Route::get('/', function () {
@@ -19,6 +19,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Rutas RESTful para documentos (index, create, store, show, edit, update, destroy)
     Route::resource('documentos', DocumentoController::class);
+
+    // Ruta de descarga usando model binding - cambiado {id} por {documento}
+    Route::get('/documentos/{documento}/descargar', [DocumentoController::class, 'download'])->name('documentos.download');
 
     // Rutas para edición y gestión del perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
