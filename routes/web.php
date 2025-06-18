@@ -1,29 +1,30 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\ProfileController; // Importa el controlador de perfil
 
-Route::middleware(['auth'])->group(function () {
-    Route::resource('documentos', DocumentoController::class);
-});
-
+// Ruta pública de bienvenida
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::resource('documentos', DocumentoController::class);
-});
-
+// Ruta protegida del dashboard
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+// Rutas protegidas para usuarios autenticados
+Route::middleware(['auth'])->group(function () {
+
+    // Rutas RESTful para documentos (index, create, store, show, edit, update, destroy)
+    Route::resource('documentos', DocumentoController::class);
+
+    // Rutas para edición y gestión del perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+// Rutas de autenticación generadas por Breeze, Jetstream, etc.
+require __DIR__ . '/auth.php';
