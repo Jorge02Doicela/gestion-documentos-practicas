@@ -19,7 +19,6 @@ class DocumentoController extends Controller
         return view('documentos.index', compact('documentos'));
     }
 
-
     /**
      * Show the form for creating a new resource.
      */
@@ -27,7 +26,6 @@ class DocumentoController extends Controller
     {
         return view('documentos.create');
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -37,6 +35,13 @@ class DocumentoController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'archivo' => 'required|file|mimes:pdf,doc,docx|max:2048',
+        ], [
+            'nombre.required' => 'El nombre del documento es obligatorio.',
+            'nombre.max' => 'El nombre del documento no puede tener más de 255 caracteres.',
+            'archivo.required' => 'Debes seleccionar un archivo.',
+            'archivo.file' => 'El archivo seleccionado no es válido.',
+            'archivo.mimes' => 'El archivo debe ser de tipo: PDF, DOC o DOCX.',
+            'archivo.max' => 'El archivo no puede ser mayor a 2MB.',
         ]);
 
         $path = $request->file('archivo')->store('documentos', 'public');
@@ -45,19 +50,25 @@ class DocumentoController extends Controller
             'user_id' => Auth::id(),
             'nombre' => $request->nombre,
             'archivo' => $path,
-            'estado' => 'pendiente',
+            'estado' => 'pendiente', // Siempre crear como pendiente
         ]);
 
         return redirect()->route('documentos.index')->with('success', 'Documento subido correctamente.');
     }
-
 
     /**
      * Display the specified resource.
      */
     public function show(string $id)
     {
-        //
+        $documento = Documento::findOrFail($id);
+
+        // Verificar que el documento pertenece al usuario autenticado
+        if ($documento->user_id !== Auth::id()) {
+            abort(403, 'No tienes permiso para ver este documento.');
+        }
+
+        return view('documentos.show', compact('documento'));
     }
 
     /**
@@ -72,38 +83,47 @@ class DocumentoController extends Controller
         return view('documentos.edit', compact('documento'));
     }
 
-
     /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, Documento $documento)
     {
+        // Verificar que el documento pertenece al usuario autenticado
         if ($documento->user_id !== Auth::id()) {
             abort(403, 'No tienes permiso para actualizar este documento.');
         }
 
+        // Validar datos entrantes
         $request->validate([
             'nombre' => 'required|string|max:255',
             'archivo' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'estado' => 'required|in:pendiente,revisado_por_tutor,aprobado,rechazado',
+            'comentarios' => 'nullable|string',
         ]);
 
-        // Si se sube un nuevo archivo
-        if ($request->hasFile('archivo')) {
-            // Eliminar archivo anterior
-            Storage::delete('public/documentos/' . $documento->archivo);
+        // Asignar nuevos valores al modelo
+        $documento->nombre = $request->nombre;
+        $documento->estado = $request->estado;
+        $documento->comentarios = $request->comentarios;
 
-            // Guardar nuevo archivo
-            $archivo = $request->file('archivo')->store('public/documentos');
-            $documento->archivo = basename($archivo);
+        // Si suben un nuevo archivo, actualizarlo
+        if ($request->hasFile('archivo')) {
+            // Eliminar el archivo anterior si existe
+            if ($documento->archivo && Storage::disk('public')->exists($documento->archivo)) {
+                Storage::disk('public')->delete($documento->archivo);
+            }
+
+            // Guardar el nuevo archivo
+            $path = $request->file('archivo')->store('documentos', 'public');
+            $documento->archivo = $path;
         }
 
-        $documento->nombre = $request->nombre;
+        // Guardar cambios en la base de datos
         $documento->save();
 
         return redirect()->route('documentos.index')
             ->with('success', 'Documento actualizado correctamente.');
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -116,7 +136,9 @@ class DocumentoController extends Controller
         }
 
         // Eliminar archivo físico del almacenamiento
-        Storage::delete('public/documentos/' . $documento->archivo);
+        if ($documento->archivo && Storage::disk('public')->exists($documento->archivo)) {
+            Storage::disk('public')->delete($documento->archivo);
+        }
 
         // Eliminar registro de la base de datos
         $documento->delete();

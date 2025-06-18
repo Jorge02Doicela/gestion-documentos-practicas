@@ -1,3 +1,4 @@
+{{-- resources/views/documentos/index.blade.php --}}
 @extends('layouts.app')
 
 @section('content')
@@ -27,14 +28,35 @@
             @forelse($documentos as $doc)
                 <tr class="border-b dark:border-gray-600">
                     <td class="p-2">{{ $doc->nombre }}</td>
-                    <td class="p-2">{{ ucfirst($doc->estado) }}</td>
+
+                    <td class="p-2">
+                        @switch($doc->estado)
+                            @case('pendiente')
+                                <span class="text-yellow-600 font-semibold">Pendiente</span>
+                                @break
+                            @case('revisado_por_tutor')
+                                <span class="text-blue-600 font-semibold">Revisado por Tutor</span>
+                                @break
+                            @case('aprobado')
+                                <span class="text-green-600 font-semibold">Aprobado</span>
+                                @break
+                            @case('rechazado')
+                                <span class="text-red-600 font-semibold">Rechazado</span>
+                                @break
+                            @default
+                                <span>{{ ucfirst(str_replace('_', ' ', $doc->estado)) }}</span>
+                        @endswitch
+                    </td>
+
                     <td class="p-2">{{ $doc->created_at->format('d/m/Y') }}</td>
-                    <td class="p-2 flex gap-2">
+
+                    <td class="p-2 flex gap-2 items-center">
                         <a href="{{ asset('storage/' . $doc->archivo) }}" target="_blank" class="text-blue-500 underline">
                             Ver
                         </a>
+
                         <a href="{{ route('documentos.edit', $doc->id) }}"
-                           class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm mr-2 inline-block">
+                           class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">
                             Editar
                         </a>
 
